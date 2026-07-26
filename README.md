@@ -16,7 +16,9 @@ Notably, a specific known issue arises when creating local users for subsequent 
 ./rpcclient.py -k domain/user@target                      # Kerberos
 proxychains rpcclient.py user@target -no-pass             # SOCKS tunnel
 ```
-
+### Demo
+![](https://github.com/PN-Tester/rpcclient.py/blob/main/RPCCLIENT_EXAMPLE.png)
+*In the above example, we use a relayed Admin SOCKS tunnel to create and escalate the local hacker account with rpcclient.py, before dumping SAM and LSA secrets from the target with the new hacker account*
 ### Connection flags
 
 | Flag | Description |
