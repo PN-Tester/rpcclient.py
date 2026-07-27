@@ -24,7 +24,7 @@ Whats worse, you cannot reset or change the blank password with :
 2) the created account itself (because its password must change, so it can't authenticate, stuck in a loop)
 3) a null session (because we dont have permission)
 
-rpcclient.py does not have this issue, because we have modified the account creation to process to clear the "password must change at next logon" flag.
+rpcclient.py does not have this issue, because we have modified the account creation process to clear the "password must change at next logon" flag.
 Even so, the account will remain unuseable by default due to restrictions on network logons using accounts with blank password (default policy).
 The fix is to enable remote registry on the target, and change the value of the key in HKLM to allow us to authenticate with the blank password having user. 
 This can be done with ```fixblankpasswordpolicy```. Now the user can authenticate but only to IPC$, not C$ or ADMIN$, or do anything spicy. The reason, despite being a local admin, is that there is another default policy that
