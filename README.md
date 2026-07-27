@@ -13,6 +13,9 @@ Additional features have been added to facilitate local account creation and sub
 ./rpcclient.py domain/user@target  -k                     # Kerberos
 proxychains rpcclient.py user@target -no-pass             # SOCKS tunnel
 ```
+![](https://github.com/PN-Tester/rpcclient.py/blob/main/usage.png)
+*Above screenshot shows basic usage of rpcclient shell over SOCKS tunnel to perform reconnaissance*
+
 
 ### Rationale
 The tool exists to offer more granular control of RPC interaction to penetration testers during internal network engagements. When operators relay NTLM authentication over SMB and create a SOCKS tunnel, a common method
