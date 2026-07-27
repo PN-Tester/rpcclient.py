@@ -36,6 +36,9 @@ When combined with the ```fixblankpasswordpolicy``` and ```fixuactokenfilter``` 
 *In the above example, we use rpcclient.py through a SOCKS tunnel to create and escalate the local user "hacker", before dumping SAM and LSA secrets from the target with the new account*   
 *NOTE : the usage of the fixblankpasswordpolicy and fixuactokenfilter commands for remote registry modifications*
 
+The same operation **fails** when using impacket-net through the SOCKS tunnel for the reasons mentioned in the rationale section
+![](https://github.com/PN-Tester/rpcclient.py/blob/main/errors.png)
+
 ### Connection flags
 
 | Flag | Description |
