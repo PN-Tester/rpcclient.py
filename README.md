@@ -1,7 +1,7 @@
 # rpcclient.py
 
-A Python implementation of Samba's `rpcclient` interactive shell, built entirely on [impacket](https://github.com/fortra/impacket).
-This version was specifically designed for compatibility with other impacket components including ntlmrelayx.
+A Python implementation of Samba's `rpcclient` interactive shell, built with [impacket](https://github.com/fortra/impacket).
+This version was specifically designed for compatibility with other impacket components including `ntlmrelayx`.
 Additional features have been added to facilitate local account creation and subsequent usage for exploitation.
 
 ## Usage
