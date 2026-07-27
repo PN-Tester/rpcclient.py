@@ -33,7 +33,8 @@ When combined with the ```fixblankpasswordpolicy``` and ```fixuactokenfilter``` 
 
 ### Demo
 ![](https://github.com/PN-Tester/rpcclient.py/blob/main/RPCCLIENT_EXAMPLE.png)
-*In the above example, we use rpcclient.py through a SOCKS tunnel to create and escalate the local "hacker", before dumping SAM and LSA secrets from the target with the new account*
+*In the above example, we use rpcclient.py through a SOCKS tunnel to create and escalate the local user "hacker", before dumping SAM and LSA secrets from the target with the new account*   
+*NOTE : the usage of the fixblankpasswordpolicy and fixuactokenfilter commands for remote registry modifications*
 
 ### Connection flags
 
