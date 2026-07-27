@@ -1,30 +1,46 @@
 # rpcclient.py
 
-A Python reimplementation of Samba's `rpcclient` interactive shell, built entirely on [impacket](https://github.com/fortra/impacket).
+A Python implementation of Samba's `rpcclient` interactive shell, built entirely on [impacket](https://github.com/fortra/impacket).
 This version was specifically designed for compatibility with other impacket components including ntlmrelayx.
-The need arose for proper RPC interactions via relayed SOCKS tunnels when I noticed that existing impacket components such as net.py were not behaving properly to create local user accounts.
-Notably, a specific known issue arises when creating local users for subsequent exploitation. Performing these operations with rpcclient.py instead circumvents the issue and enables exploitation via the created accounts.
-> **Authorized testing only.** This tool creates/deletes accounts, changes passwords, modifies group membership, and edits the registry on remote Windows systems. Use it only against systems you own or are explicitly authorized to test.
+Additional features have been added to facilitate local account creation and subsequent usage for exploitation.
 
----
 ## Usage
 
 ```bash
 ./rpcclient.py [domain/]user[:password]@target
-./rpcclient.py -hashes LM:NT domain/user@target          # pass-the-hash
-./rpcclient.py -no-pass domain/user@target                # anonymous / prompt
-./rpcclient.py -k domain/user@target                      # Kerberos
+./rpcclient.py domain/user@target -hashes LM:NT           # pass-the-hash
+./rpcclient.py domain/user@target -no-pass                # anonymous
+./rpcclient.py domain/user@target  -k                     # Kerberos
 proxychains rpcclient.py user@target -no-pass             # SOCKS tunnel
 ```
+
+### Rationale
+The tool exists to offer more granular control of RPC interaction to penetration testers during internal network engagements. When operators relay NTLM authentication over SMB and create a SOCKS tunnel, a common method
+of solidifying this foothold is through creation of a local account on the target computer. Subsequently escalating this account to local administrator of the victim machine is trivial, but *actually using* the account is not!
+Specifically, a common issue arises when using net.py through an ntlmrelay SOCKS to create users or reset passwords. The RPC method call used to set the password requires a session key to encrypt the value, but because we are in a SOCKS tunnel, there is no session key we can access. Thus, the password of the created account is always blank.
+While a blank password is perfectly fine from an authentication standpoint (we can provide '' or the NT hash ```31D6CFE0D16AE931B73C59D7E0C089C0``` for credentials), it presents all sorts of problems in windows land.
+Whats worse, you cannot reset or change the blank password with :
+1) the original relayed admin session (because we dont have a session key)
+2) the created account itself (because its password must change, so it can't authenticate, stuck in a loop)
+3) a null session (because we dont have permission)
+
+rpcclient.py does not have this issue, because we have modified the account creation to process to clear the "password must change at next logon" flag.
+Even so, the account will remain unuseable by default due to restrictions on network logons using accounts with blank password (default policy).
+The fix is to enable remote registry on the target, and change the value of the key in HKLM to allow us to authenticate with the blank password having user. 
+This can be done with ```fixblankpasswordpolicy```. Now the user can authenticate but only to IPC$, not C$ or ADMIN$, or do anything spicy. The reason, despite being a local admin, is that there is another default policy that
+limits the token privileges a local admin gets over the network. If we want an admin session, we need to change this registry value as well with ```fixuactokenfilter```.
+When combined with the ```fixblankpasswordpolicy``` and ```fixuactokenfilter``` commands, the created account is ready for usage out of the box.
+
 ### Demo
 ![](https://github.com/PN-Tester/rpcclient.py/blob/main/RPCCLIENT_EXAMPLE.png)
-*In the above example, we use a relayed Admin SOCKS tunnel to create and escalate the local hacker account with rpcclient.py, before dumping SAM and LSA secrets from the target with the new hacker account*
+*In the above example, we use rpcclient.py through a SOCKS tunnel to create and escalate the local "hacker", before dumping SAM and LSA secrets from the target with the new account*
+
 ### Connection flags
 
 | Flag | Description |
 |---|---|
 | `-hashes LMHASH:NTHASH` | NTLM pass-the-hash authentication |
-| `-no-pass` | Don't prompt for a password (anonymous, or used with `-hashes`) |
+| `-no-pass` | Don't prompt for a password (useful for -k or relays) |
 | `-k` | Kerberos authentication (pulls credentials from ccache) |
 | `-aesKey <hex key>` | AES key for Kerberos (128 or 256 bit) |
 | `-dc-ip <ip>` | IP of a domain controller, for Kerberos |
@@ -124,25 +140,6 @@ Both `fix*` commands track whether *this session* had to auto-enable the Remote 
 
 ---
 
-## Beyond stock rpcclient
-
-A few things here exist specifically because real `rpcclient` doesn't do them, or does them in a way that leaves accounts unusable in practice:
-
-- **`createdomuser` doesn't set passord_must_change** Real rpcclient's `createdomuser` only calls `SamrCreateUser2` — no password parameter exists at all, leaving every new account disabled and passwordless. This version optionally sets the password, enables the account, and clears the disabled flag in one command.
-
-- **full SOCKS tunnel compatibility** This version will work using your relay authentication in the SOCKS tunnel without problem.
-  
-- **`fixblankpasswordpolicy` / `fixuactokenfilter`** exist because two extremely common, on-by-default Windows policies otherwise make a perfectly correctly-created local account look broken over the network:
-  - A local account with a **blank password** cannot authenticate over the network at all by default (console/physical logon only) — regardless of whether it's enabled, in Administrators, etc.
-  - A local account that genuinely **is** a member of Administrators still gets a UAC-filtered, non-admin token on network logon by default — it can establish a session and browse `IPC$`, but gets denied on `C$`/`ADMIN$` and can't do remote command execution, with no error suggesting why. (The built-in RID-500 `Administrator` account is exempt from this by default, which is why it never shows this symptom.)
-
-  Both are genuine Windows security controls, not bugs — these commands just make it possible to toggle them from an existing admin RPC session instead of needing console/RDP access to the target.
-
----
-
-## A note on `-dialect` / `smbinfo`
-
-Some SAMR password-set operations encrypt their payload using the underlying **SMB session key**. impacket only derives that key for SMB3 connections that actually negotiated message encryption — if the session lands on SMB 2.x, or encryption capability doesn't come through cleanly (this can happen over some proxied/tunneled paths), the key stays empty and those calls fail with `STATUS_WRONG_PASSWORD` rather than succeeding. Run `smbinfo` to check the negotiated dialect and session-key length if you hit this. `-dialect 1` (forcing legacy SMB1) sidesteps the dependency entirely, but only works if the target still has the SMB1 server component enabled — most current Windows builds do not, and forcing it against one that doesn't will just break the connection with a protocol-mismatch error instead of falling back gracefully.
 
 ## License
 
