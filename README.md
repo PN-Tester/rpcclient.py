@@ -148,6 +148,3 @@ Both `fix*` commands track whether *this session* had to auto-enable the Remote 
 ---
 
 
-## License
-
-No license specified — treat as source-available for personal/internal use unless you know otherwise.
